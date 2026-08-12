@@ -55,7 +55,7 @@ class AdzunaConnector(BaseConnector):
     def health_check(self) -> dict:
         """Quick ping: fetch 1 result from the API."""
         if not self.app_id:
-            return {"status": "error", "detail": "ADZ_002: ADZUNA_APP_ID not configured"}
+            return {"status": "not_started", "detail": "ADZUNA_APP_ID not configured"}
         try:
             resp = httpx.get(
                 f"{BASE_URL}/de/search/1",

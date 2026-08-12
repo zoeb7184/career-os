@@ -55,7 +55,7 @@ class ReedConnector(BaseConnector):
 
     def health_check(self) -> dict:
         if not self.api_key:
-            return {"status": "error", "detail": "REED_002: REED_API_KEY not configured"}
+            return {"status": "not_started", "detail": "REED_API_KEY not configured"}
         try:
             resp = httpx.get(
                 f"{BASE_URL}/search",

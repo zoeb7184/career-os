@@ -64,9 +64,11 @@ jobs:
           JWT_SECRET_KEY: test-secret-key-for-ci
           ENVIRONMENT: development
           LOG_LEVEL: WARNING
-          ADZUNA_APP_ID: test
-          ADZUNA_APP_KEY: test
-          REED_API_KEY: test
+          # Deliberately left unset: Adzuna/Reed connectors report status "not_started"
+          # (not "error") when unconfigured — a fake placeholder value like "test" would
+          # be truthy and make them hit the real external APIs with bogus credentials,
+          # which fails with 401 and makes /health legitimately report "error". Unit
+          # tests shouldn't depend on live third-party API calls at all.
           EMBEDDING_MODEL: all-MiniLM-L6-v2
           GROQ_MODEL_EXTRACTION: llama-3.1-8b-instant
           GROQ_MODEL_ADVISOR: llama-3.3-70b-versatile
