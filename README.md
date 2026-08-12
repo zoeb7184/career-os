@@ -267,9 +267,7 @@ Full interactive docs at `http://localhost:8000/docs`
 
 Built by **Zoeb Ali Khan**
 
-M.Sc. Data Science · Universität Bielefeld · Expected March 2027
-
-DataCamp Certified: Data Scientist Professional · Data Engineer Associate
+M.Sc. Data Science · Universität Bielefeld 
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/zoeb-ali-khan)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github)](https://github.com/zoeb7184)
