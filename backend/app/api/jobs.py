@@ -8,10 +8,11 @@ GET /api/v1/jobs/{id}        — Single job detail
 GET /api/v1/jobs/{id}/skills — Skills required for a job
 """
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.errors import NotFoundError

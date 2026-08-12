@@ -6,10 +6,11 @@ Job recommendation endpoints.
 GET /api/v1/recommend/{user_id}  — Get personalised job recommendations
 """
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.errors import NotFoundError

@@ -17,10 +17,12 @@ Usage in workers/scripts (sync):
         ...
 """
 from functools import lru_cache
+
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
 from app.config import settings
 from app.logger import get_logger
 
@@ -67,7 +69,6 @@ def get_sync_engine() -> Engine:
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy models. Import this in every model file."""
-    pass
 
 
 async def get_db():

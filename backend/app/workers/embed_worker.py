@@ -4,10 +4,11 @@ backend/app/workers/embed_worker.py
 Celery tasks for generating embeddings and upserting to Qdrant.
 """
 import sys
+
 sys.path.insert(0, '/pkgs')
 
-from app.workers.celery_app import celery_app
 from app.logger import get_logger
+from app.workers.celery_app import celery_app
 
 logger = get_logger("embed_worker")
 
@@ -16,10 +17,11 @@ logger = get_logger("embed_worker")
 def embed_job_task(self, job_id: str) -> dict:
     """Generate embedding for a job and upsert to Qdrant 'jobs' collection."""
     try:
+        from ml.shared.embedder import get_embedder
         from sqlalchemy import text
+
         from app.config import settings
         from app.database import get_sync_engine
-        from ml.shared.embedder import get_embedder
 
         engine = get_sync_engine()
         with engine.connect() as conn:
@@ -94,10 +96,11 @@ def embed_job_task(self, job_id: str) -> dict:
 def embed_resume_task(self, resume_id: str) -> dict:
     """Generate embedding for a resume and upsert to Qdrant 'resumes' collection."""
     try:
+        from ml.shared.embedder import get_embedder
         from sqlalchemy import text
+
         from app.config import settings
         from app.database import get_sync_engine
-        from ml.shared.embedder import get_embedder
 
         engine = get_sync_engine()
         with engine.connect() as conn:

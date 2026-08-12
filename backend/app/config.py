@@ -5,6 +5,7 @@ All configuration comes from environment variables.
 Never hardcode secrets. Access settings via: from app.config import settings
 """
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

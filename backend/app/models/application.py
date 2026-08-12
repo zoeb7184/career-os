@@ -3,8 +3,10 @@ backend/app/models/application.py
 Job applications tracked by the user (the Kanban board data).
 """
 from datetime import datetime
-from sqlalchemy import String, Float, Text, DateTime, ForeignKey, func
+
+from sqlalchemy import DateTime, Float, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.database import Base
 
 

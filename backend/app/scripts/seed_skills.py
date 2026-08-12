@@ -7,12 +7,13 @@ Run ONCE after alembic upgrade head:
 
 Idempotent — safe to run multiple times (uses INSERT ... ON CONFLICT DO NOTHING).
 """
-import uuid
 import sys
-import os
+import uuid
+
 sys.path.insert(0, '/app')
 
 from sqlalchemy import text
+
 from app.database import get_sync_engine
 from app.logger import get_logger
 
@@ -79,7 +80,7 @@ def seed():
 
         conn.commit()
 
-    logger.info(f"Skill seeding complete", extra={"extra": {
+    logger.info("Skill seeding complete", extra={"extra": {
         "inserted": inserted, "skipped": skipped, "total": inserted + skipped
     }})
     print(f"✅ Skills seeded: {inserted} inserted, {skipped} already existed")

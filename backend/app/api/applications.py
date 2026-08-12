@@ -9,14 +9,15 @@ PATCH  /api/v1/applications/{id}    — update status
 DELETE /api/v1/applications/{id}    — remove
 """
 import uuid
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.api.auth import get_current_user
+from app.database import get_db
 from app.errors import NotFoundError, ValidationError
 from app.logger import get_logger
 

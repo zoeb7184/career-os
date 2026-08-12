@@ -11,8 +11,8 @@ recommender / ATS analyzer / analytics endpoints have nothing to match on.
 """
 import asyncio
 
-from app.workers.celery_app import celery_app
 from app.logger import get_logger
+from app.workers.celery_app import celery_app
 
 logger = get_logger("skill_worker")
 
@@ -21,10 +21,11 @@ logger = get_logger("skill_worker")
 def extract_job_skills_task(self, job_id: str) -> dict:
     """Extract skills for one job via the LLM, normalise, and upsert into job_skills."""
     try:
-        from sqlalchemy import text
-        from app.database import get_sync_engine
-        from ml.skill_extractor.extractor import SkillExtractor
         from data_pipeline.transformers.skill_normalizer import normalise_skill
+        from ml.skill_extractor.extractor import SkillExtractor
+        from sqlalchemy import text
+
+        from app.database import get_sync_engine
 
         engine = get_sync_engine()
         with engine.connect() as conn:
@@ -88,10 +89,11 @@ def extract_resume_skills_task(self, resume_id: str) -> dict:
     skill overlap against resume_skills.
     """
     try:
-        from sqlalchemy import text
-        from app.database import get_sync_engine
-        from ml.skill_extractor.extractor import SkillExtractor
         from data_pipeline.transformers.skill_normalizer import normalise_skill
+        from ml.skill_extractor.extractor import SkillExtractor
+        from sqlalchemy import text
+
+        from app.database import get_sync_engine
 
         engine = get_sync_engine()
         with engine.connect() as conn:

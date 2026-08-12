@@ -3,8 +3,8 @@ Adds jobs.url (referenced by GET /jobs/{id} but never created in 0001) and
 the resume_skills table (referenced by GET /recommend/{user_id} but never
 created in 0001).
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = '0002_url_and_resume_skills'
 down_revision = '0001_initial'

@@ -13,10 +13,11 @@ GET /api/v1/analytics/locations/top      — Top hiring cities/countries
 GET /api/v1/analytics/forecast/{skill}   — 90-day demand forecast for a skill
 """
 from __future__ import annotations
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.logger import get_logger
@@ -203,7 +204,7 @@ async def forecast_skill(skill: str, db: AsyncSession = Depends(get_db)):
     freshly-seeded install, not a failure.
     """
     import pandas as pd
-    from ml.forecaster.forecaster import SkillDemandForecaster, ForecasterError
+    from ml.forecaster.forecaster import ForecasterError, SkillDemandForecaster
 
     result = await db.execute(text("""
         SELECT ms.snapshot_date AS ds, SUM(ms.demand) AS y

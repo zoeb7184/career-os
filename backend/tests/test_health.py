@@ -6,9 +6,11 @@ This is the most important test — if health breaks, everything is blind.
 
 Run: make test-node N=tests  OR  pytest backend/tests/test_health.py -v
 """
-import pytest
-from httpx import AsyncClient, ASGITransport
 from unittest.mock import patch
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
 from app.main import app
 
 

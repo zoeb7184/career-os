@@ -10,12 +10,14 @@ GET /api/v1/ats/result/{task_id}
   Poll for async ATS result (for large files).
 """
 from __future__ import annotations
+
 import uuid
-from fastapi import APIRouter, UploadFile, File, Form, Depends
+
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
 
 from app.database import get_db
 from app.errors import NotFoundError, ValidationError

@@ -5,8 +5,10 @@ SQLAlchemy model for the jobs table.
 Every job ingested from any source goes here.
 """
 from datetime import datetime
-from sqlalchemy import String, Text, Numeric, Boolean, DateTime, func
+
+from sqlalchemy import Boolean, DateTime, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.database import Base
 
 

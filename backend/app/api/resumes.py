@@ -8,14 +8,15 @@ GET  /api/v1/resumes/        — list user's resumes
 DELETE /api/v1/resumes/{id}  — delete
 """
 import uuid
-from fastapi import APIRouter, UploadFile, File, Depends
-from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 
-from app.database import get_db
+from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.auth import get_current_user
-from app.errors import ValidationError, NotFoundError
+from app.database import get_db
+from app.errors import NotFoundError, ValidationError
 from app.logger import get_logger
 
 logger = get_logger("api_resumes")
@@ -31,7 +32,7 @@ async def upload_resume(
 ):
     file_bytes = await file.read()
     if len(file_bytes) > MAX_SIZE:
-        raise ValidationError(f"File too large. Max 5MB.")
+        raise ValidationError("File too large. Max 5MB.")
     filename = file.filename or "resume.pdf"
     ext = filename.lower().split(".")[-1]
     if ext not in ("pdf", "docx", "doc"):

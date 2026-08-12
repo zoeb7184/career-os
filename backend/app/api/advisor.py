@@ -7,12 +7,11 @@ POST /api/v1/advisor/ask        — Single Q&A response
 POST /api/v1/advisor/stream     — Streaming response (Server-Sent Events)
 """
 from __future__ import annotations
-from fastapi import APIRouter, Depends
+
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.logger import get_logger
 
 logger = get_logger("api_advisor")

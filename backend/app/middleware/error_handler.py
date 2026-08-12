@@ -11,8 +11,9 @@ Response shape (always):
 This means frontend and API consumers always know exactly what to check.
 """
 from fastapi import Request
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 from app.errors import NodeError
 from app.logger import get_logger
 

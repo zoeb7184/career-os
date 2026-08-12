@@ -4,27 +4,29 @@ backend/app/main.py
 FastAPI application — all routers registered, all middleware wired.
 """
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import settings
-from app.logger import get_logger
-from app.errors import NodeError
-from app.middleware.logging import RequestLoggingMiddleware
-from app.middleware.error_handler import (
-    node_error_handler, validation_error_handler, unhandled_error_handler,
-)
-
-from app.api.health      import router as health_router
-from app.api.auth        import router as auth_router
-from app.api.jobs        import router as jobs_router
-from app.api.ats         import router as ats_router
-from app.api.recommend   import router as recommend_router
-from app.api.advisor     import router as advisor_router
-from app.api.analytics   import router as analytics_router
-from app.api.resumes     import router as resumes_router
+from app.api.advisor import router as advisor_router
+from app.api.analytics import router as analytics_router
 from app.api.applications import router as applications_router
+from app.api.ats import router as ats_router
+from app.api.auth import router as auth_router
+from app.api.health import router as health_router
+from app.api.jobs import router as jobs_router
+from app.api.recommend import router as recommend_router
+from app.api.resumes import router as resumes_router
+from app.config import settings
+from app.errors import NodeError
+from app.logger import get_logger
+from app.middleware.error_handler import (
+    node_error_handler,
+    unhandled_error_handler,
+    validation_error_handler,
+)
+from app.middleware.logging import RequestLoggingMiddleware
 
 logger = get_logger("career_os")
 

@@ -6,8 +6,8 @@ Celery tasks for ATS analysis (runs async, off the main API thread).
 These are stubs — they log and return a placeholder until
 ml/ats_analyzer/ is built in Phase 2.
 """
-from app.workers.celery_app import celery_app
 from app.logger import get_logger
+from app.workers.celery_app import celery_app
 
 logger = get_logger("ats_worker")
 

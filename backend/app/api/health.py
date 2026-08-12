@@ -5,7 +5,9 @@ Master health endpoint — aggregates ALL node health checks.
 GET /health → see every node's status in one request.
 """
 import time
+
 from fastapi import APIRouter
+
 from app.config import settings
 from app.logger import get_logger
 
@@ -16,6 +18,7 @@ router = APIRouter()
 def _check_postgres() -> dict:
     try:
         from sqlalchemy import text
+
         from app.database import get_sync_engine
         with get_sync_engine().connect() as conn:
             result = conn.execute(text("SELECT COUNT(*) FROM jobs")).scalar()

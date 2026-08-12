@@ -4,15 +4,17 @@ Alembic migration environment.
 Run migrations: docker exec career-os-api alembic upgrade head
 Create new migration: docker exec career-os-api alembic revision --autogenerate -m "description"
 """
+import os
+import sys
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+
 from alembic import context
-import sys, os
+from sqlalchemy import engine_from_config, pool
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from app.config import settings
 from app.database import Base
-from app.models import Job, User, Application  # noqa: F401 — needed for autogenerate
+from app.models import Application, Job, User  # noqa: F401 — needed for autogenerate
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.postgres_url)

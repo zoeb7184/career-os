@@ -22,9 +22,9 @@ Usage in any node:
     logger.info("Scoring started", extra={"extra": {"resume_id": resume_id}})
     logger.error("Parse failed",   extra={"extra": {"error_code": "ATS_001", "file": filename}})
 """
+import json
 import logging
 import sys
-import json
 from datetime import datetime, timezone
 
 

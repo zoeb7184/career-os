@@ -8,21 +8,22 @@ POST /api/v1/auth/login     — get JWT token
 GET  /api/v1/auth/me        — get current user (protected)
 """
 from __future__ import annotations
+
 import uuid
 from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from jose import jwt, JWTError
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from passlib.context import CryptContext
+from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.config import settings
+from app.database import get_db
 from app.logger import get_logger
-from app.errors import NodeError
 
 logger = get_logger("auth")
 router = APIRouter()
