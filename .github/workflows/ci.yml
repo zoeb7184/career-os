@@ -57,6 +57,13 @@ jobs:
 
       - name: Run tests
         env:
+          # ml/ and data_pipeline/ are siblings of backend/, not children of it — the
+          # health checks import them as top-level packages (`from ml...`, `from
+          # data_pipeline...`). Without the repo root on PYTHONPATH, cwd=backend alone
+          # only makes `app.*` resolve, and every ml/data_pipeline-backed health check
+          # fails with ModuleNotFoundError, which _check_* turns into "status": "error"
+          # and poisons /health's overall status.
+          PYTHONPATH: ${{ github.workspace }}
           POSTGRES_URL: postgresql://career_user:career_pass@localhost:5432/career_os
           REDIS_URL: redis://localhost:6379/0
           QDRANT_URL: http://localhost:6333
