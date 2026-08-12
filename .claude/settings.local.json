@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(docker exec *)",
+      "Bash(nohup bash -c ' *)",
+      "Bash(echo \"started bg pid $!\")",
+      "Bash(npm --version)"
+    ]
+  }
+}

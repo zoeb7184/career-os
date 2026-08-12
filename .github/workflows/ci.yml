@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Lint
+        run: |
+          cd backend
+          ruff check .
+
+      - name: Run tests
+        env:
+          POSTGRES_URL: postgresql://test:test@localhost:5432/test
+          REDIS_URL: redis://localhost:6379/0
+          QDRANT_URL: http://localhost:6333
+          GROQ_API_KEY: test-key
+          JWT_SECRET_KEY: test-secret
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
+        run: |
+          pytest backend/tests/ -v --tb=short
+          pytest ml/ats_analyzer/tests/ -v --tb=short
+          pytest ml/forecaster/tests/ -v --tb=short
+          pytest ml/recommender/tests/ -v --tb=short
+          pytest data_pipeline/tests/ -v --tb=short
