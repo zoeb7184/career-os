@@ -15,8 +15,8 @@ import { isApiError } from "@/lib/auth-store";
 import { UploadCloud, FileCheck2, Loader2, Search, CheckCircle2, XCircle, Lightbulb, X } from "lucide-react";
 
 function scoreColor(score: number): string {
-  if (score >= 75) return "text-emerald-600 dark:text-emerald-400";
-  if (score >= 50) return "text-amber-600 dark:text-amber-400";
+  if (score >= 75) return "text-[color:var(--status-good)]";
+  if (score >= 50) return "text-[color:var(--status-warning)]";
   return "text-destructive";
 }
 
@@ -202,7 +202,7 @@ function ATSPageInner() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-1.5 text-base">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Matched skills
+                    <CheckCircle2 className="h-4 w-4 text-[color:var(--status-good)]" /> Matched skills
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-1.5">
@@ -229,7 +229,7 @@ function ATSPageInner() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-1.5 text-base">
-                    <Lightbulb className="h-4 w-4 text-amber-500" /> Suggestions
+                    <Lightbulb className="h-4 w-4 text-brand" /> Suggestions
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

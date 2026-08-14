@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Briefcase, LayoutDashboard, Search, FileCheck2, BarChart3, MessageSquareText, Kanban, Menu, X } from "lucide-react";
+import { Briefcase, LayoutDashboard, Search, FileCheck2, BarChart3, MessageSquareText, Kanban, Sparkles, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ButtonLink } from "@/components/button-link";
@@ -24,6 +24,7 @@ const links = [
   { href: "/advisor", label: "Advisor", icon: MessageSquareText },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tracker", label: "Tracker", icon: Kanban },
+  { href: "/import", label: "Import", icon: Sparkles, brand: true },
 ];
 
 export function Navbar() {
@@ -49,7 +50,13 @@ export function Navbar() {
                 href={l.href}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                  active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                  l.brand
+                    ? active
+                      ? "bg-brand/15 text-brand"
+                      : "text-brand/90 hover:bg-brand/10 hover:text-brand"
+                    : active
+                      ? "bg-secondary text-secondary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                 )}
               >
                 <l.icon className="h-4 w-4" />
@@ -103,7 +110,10 @@ export function Navbar() {
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium hover:bg-secondary"
+              className={cn(
+                "flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium",
+                l.brand ? "text-brand hover:bg-brand/10" : "hover:bg-secondary"
+              )}
             >
               <l.icon className="h-4 w-4" />
               {l.label}

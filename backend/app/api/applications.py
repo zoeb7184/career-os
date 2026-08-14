@@ -60,8 +60,8 @@ async def list_applications(
 ):
     result = await db.execute(text("""
         SELECT a.id, a.job_id, a.status, a.ats_score, a.notes,
-               a.created_at, a.updated_at,
-               j.title, j.company, j.location, j.remote_type
+               a.created_at, a.updated_at, a.applied_at, a.platform,
+               j.title, j.company, j.location, j.remote_type, j.url, j.salary_min, j.salary_max
         FROM applications a
         LEFT JOIN jobs j ON a.job_id = j.id
         WHERE a.user_id = :uid
@@ -74,7 +74,14 @@ async def list_applications(
             "notes": r[4],
             "created_at": r[5].isoformat() if r[5] else None,
             "updated_at": r[6].isoformat() if r[6] else None,
-            "job": {"title": r[7], "company": r[8], "location": r[9], "remote_type": r[10]},
+            "applied_at": r[7].isoformat() if r[7] else None,
+            "platform": r[8],
+            "job": {
+                "title": r[9], "company": r[10], "location": r[11], "remote_type": r[12],
+                "url": r[13],
+                "salary_min": float(r[14]) if r[14] is not None else None,
+                "salary_max": float(r[15]) if r[15] is not None else None,
+            },
         }
         for r in rows
     ], "error": None})

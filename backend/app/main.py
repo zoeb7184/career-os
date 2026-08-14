@@ -15,6 +15,7 @@ from app.api.applications import router as applications_router
 from app.api.ats import router as ats_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
+from app.api.import_router import router as import_router
 from app.api.jobs import router as jobs_router
 from app.api.recommend import router as recommend_router
 from app.api.resumes import router as resumes_router
@@ -83,6 +84,7 @@ def create_app() -> FastAPI:
     app.include_router(analytics_router,    prefix=f"{settings.api_prefix}/analytics",    tags=["Analytics"])
     app.include_router(resumes_router,      prefix=f"{settings.api_prefix}/resumes",      tags=["Resumes"])
     app.include_router(applications_router, prefix=f"{settings.api_prefix}/applications", tags=["Applications"])
+    app.include_router(import_router,       prefix=f"{settings.api_prefix}/import",       tags=["Import"])
 
     @app.get("/", tags=["Root"])
     async def root():

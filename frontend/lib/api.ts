@@ -252,11 +252,16 @@ export interface Application {
   notes: string | null;
   created_at: string | null;
   updated_at: string | null;
+  applied_at: string | null;
+  platform: string | null;
   job: {
     title: string | null;
     company: string | null;
     location: string | null;
     remote_type: string | null;
+    url: string | null;
+    salary_min: number | null;
+    salary_max: number | null;
   };
 }
 
@@ -418,6 +423,93 @@ export const applications = {
     }),
   remove: (id: string) =>
     apiFetch<{ deleted: string }>(`${API_PREFIX}/applications/${id}`, { method: "DELETE", auth: true }),
+};
+
+// ── Smart Import ─────────────────────────────────────────────────────
+
+export interface ImportRow {
+  row_index: number;
+  job_title: string | null;
+  company: string | null;
+  location: string | null;
+  date_applied: string | null; // ISO date
+  status: ApplicationStatus;
+  status_recognized: boolean;
+  job_url: string | null;
+  notes: string | null;
+  salary_text: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  platform: string | null;
+  days_since_applied: number | null;
+  is_stale: boolean;
+  is_duplicate: boolean;
+  duplicate_reason: string | null;
+  warnings: string[];
+  skip: boolean;
+}
+
+export type ImportColumnField =
+  | "job_title" | "company" | "location" | "date_applied" | "status"
+  | "job_url" | "notes" | "salary" | "platform";
+
+export interface ImportPreview {
+  filename: string;
+  file_type: "xlsx" | "pdf";
+  detected_columns: string[];
+  column_mapping: Record<ImportColumnField, string | null>;
+  rows: ImportRow[];
+  summary: {
+    total: number;
+    saved: number;
+    applied: number;
+    interview: number;
+    offer: number;
+    rejected: number;
+    duplicate_count: number;
+    stale_count: number;
+    response_rate: number;
+  };
+}
+
+export interface ImportConfirmResult {
+  import_id: string;
+  imported: number;
+  skipped: number;
+  duplicate_count: number;
+  status_counts: Record<string, number>;
+}
+
+export interface ImportHistoryEntry {
+  id: string;
+  filename: string;
+  file_type: string;
+  total_rows: number;
+  imported_rows: number;
+  skipped_rows: number;
+  duplicate_count: number;
+  status_counts: Record<string, number>;
+  created_at: string | null;
+}
+
+export const imports = {
+  upload: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return apiFetch<ImportPreview>(`${API_PREFIX}/import/upload`, {
+      method: "POST",
+      body: form,
+      isForm: true,
+      auth: true,
+    });
+  },
+  confirm: (filename: string, fileType: string, rows: ImportRow[]) =>
+    apiFetch<ImportConfirmResult>(`${API_PREFIX}/import/confirm`, {
+      method: "POST",
+      auth: true,
+      body: JSON.stringify({ filename, file_type: fileType, rows }),
+    }),
+  history: () => apiFetch<ImportHistoryEntry[]>(`${API_PREFIX}/import/history`, { auth: true }),
 };
 
 // ── Health ───────────────────────────────────────────────────────────

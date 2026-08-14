@@ -14,7 +14,7 @@ from sqlalchemy import engine_from_config, pool
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from app.config import settings
 from app.database import Base
-from app.models import Application, Job, User  # noqa: F401 — needed for autogenerate
+from app.models import Application, ImportBatch, Job, User  # noqa: F401 — needed for autogenerate
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.postgres_url)
