@@ -19,14 +19,27 @@ jobs:
       github.event.workflow_run.event == 'push'
     container: ghcr.io/railwayapp/cli:latest
     env:
+      # RAILWAY_TOKEN must be a *project* token (Railway dashboard → this
+      # project → Settings → Tokens), not an account/personal token — a
+      # project token already scopes project + environment on its own
+      # (this one is career-os / production). Don't also pass --project /
+      # --environment on the commands below: combining explicit UUID flags
+      # with an already-scoped project token is what caused the earlier
+      # "Service not found" failures — the token's implicit scoping and
+      # the flags fight each other instead of agreeing. Bare `--service
+      # <name>` is the reliable pattern (confirmed against Railway's own
+      # community docs: https://station.railway.com/questions/deploy-using-ci-cd-github-actions-18407bf0).
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      # Service names must match Railway exactly (confirmed via `railway
+      # status`) — this project's backend service is "career-os" (not
+      # "api", which doesn't exist here).
       - name: Deploy backend API
-        run: railway up --service api --ci
+        run: railway up --service career-os --ci
 
       - name: Deploy frontend
         run: railway up --service frontend --ci
