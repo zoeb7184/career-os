@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────
+#  Repo-root .dockerignore
+#
+#  Applies to any Docker build whose context is the repo root — that's
+#  backend/Dockerfile.railway (via railway.json / docker-compose.prod.yml).
+#  Without this, the build context includes frontend/node_modules and
+#  frontend/.next (well over 1GB combined) plus .git, none of which the
+#  Python backend image needs, and all of which make every Railway
+#  build slower than it has to be.
+#
+#  Frontend has its own frontend/.dockerignore, scoped to its own build
+#  context — this file is NOT used for the frontend image build.
+# ─────────────────────────────────────────────────────────────────
+
+.git/
+.github/
+
+# Frontend — entirely irrelevant to the backend image
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ML artifacts — too large, and not what ships in the image
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.bin
+ml/models/
+mlflow/
+mlruns/
+
+# Env / secrets — never bake these into an image layer
+.env
+.env.*
+!.env.example
+frontend/.env.local
+
+# Misc project files not needed at runtime
+samples/
+demo-cv.pdf
+docs/
+HANDOFF.md
+README.md
+DEPLOY.md
+*.md
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+.claude/

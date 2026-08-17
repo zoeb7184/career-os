@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_user
 from app.database import get_db
-from app.errors import ValidationError
+from app.errors import NotFoundError, ValidationError
 from app.logger import get_logger
 
 logger = get_logger("api_import")
@@ -60,7 +60,7 @@ class ConfirmImportRequest(BaseModel):
 
 def _normalize_status(status: str | None) -> str:
     s = (status or "").strip().lower()
-    return s if s in VALID_STATUSES else "applied"
+    return s if s in VALID_STATUSES else "saved"
 
 
 def _parse_iso_date(value: str | None) -> date | None:
@@ -221,3 +221,45 @@ async def import_history(
         }
         for r in rows
     ], "error": None})
+
+
+@router.delete("/history/{import_id}")
+async def delete_import(
+    import_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """Deletes an import batch AND everything it created: the applications it
+    inserted, and the synthetic `jobs` rows those applications hung off of
+    (never a real ingested listing — always source='import', scoped to job_ids
+    this import's own applications pointed at)."""
+    owned = await db.execute(text(
+        "SELECT id FROM imports WHERE id = :id AND user_id = :uid"
+    ), {"id": import_id, "uid": current_user["id"]})
+    if not owned.fetchone():
+        raise NotFoundError("Import", import_id)
+
+    job_ids_result = await db.execute(text(
+        "SELECT job_id FROM applications WHERE import_id = :id AND user_id = :uid"
+    ), {"id": import_id, "uid": current_user["id"]})
+    job_ids = [r[0] for r in job_ids_result.fetchall()]
+
+    deleted_apps = await db.execute(text(
+        "DELETE FROM applications WHERE import_id = :id AND user_id = :uid RETURNING id"
+    ), {"id": import_id, "uid": current_user["id"]})
+    deleted_count = len(deleted_apps.fetchall())
+
+    if job_ids:
+        await db.execute(text(
+            "DELETE FROM jobs WHERE id = ANY(:job_ids) AND source = 'import'"
+        ), {"job_ids": job_ids})
+
+    await db.execute(text(
+        "DELETE FROM imports WHERE id = :id AND user_id = :uid"
+    ), {"id": import_id, "uid": current_user["id"]})
+    await db.commit()
+
+    logger.info("Import deleted", extra={"extra": {
+        "user_id": current_user["id"], "import_id": import_id, "applications_removed": deleted_count,
+    }})
+    return JSONResponse(content={"data": {"deleted": import_id, "applications_removed": deleted_count}, "error": None})

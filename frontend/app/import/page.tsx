@@ -24,14 +24,14 @@ import { cn } from "@/lib/utils";
 import { formatSalary } from "@/lib/format";
 import {
   imports as importsApi, applications as applicationsApi,
-  type ImportPreview, type ImportRow, type ImportHistoryEntry,
-  type Application, type ApplicationStatus,
+  type ImportPreview, type ImportRow, type ImportHistoryEntry, type ImportColumnField,
+  type Application, type ApplicationStatus, type RawCellValue,
 } from "@/lib/api";
 import { isApiError } from "@/lib/auth-store";
 import {
   Sparkles, UploadCloud, FileSpreadsheet, FileText, Loader2, X,
   AlertTriangle, CheckCircle2, Search, Download, MoreHorizontal, Trash2,
-  Building2, MapPin, ArrowUpDown, History, ExternalLink,
+  Building2, MapPin, ArrowUpDown, History, ExternalLink, Wand2,
 } from "lucide-react";
 
 // ── Shared helpers ──────────────────────────────────────────────────
@@ -97,6 +97,85 @@ const COLUMN_LABELS: Record<string, string> = {
   date_applied: "Date Applied", status: "Status", job_url: "Job URL",
   notes: "Notes", salary: "Salary", platform: "Source / Platform",
 };
+
+// ── Client-side re-derivation for manual column-mapping overrides ────
+// When the user points a field at a different detected column, we don't
+// round-trip to the server — we recompute that field's values from the raw
+// per-row cells the preview already sent us. Best-effort by design: the
+// existing inline cell editors in the review table are the real safety net,
+// this just gets the user 90% of the way there instantly.
+
+function toText(raw: RawCellValue | undefined): string | null {
+  if (raw === null || raw === undefined) return null;
+  const s = String(raw).trim();
+  return s ? s : null;
+}
+
+function toDateIso(raw: RawCellValue | undefined): string | null {
+  const s = toText(raw);
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+// Mirrors the shape of ml/import_parser/parser.py's STATUS_KEYWORDS (offer
+// and rejected checked first) — kept intentionally small since this only
+// runs right after a manual remap; the per-row Status <Select> is the
+// full-fidelity fallback.
+const CLIENT_STATUS_KEYWORDS: [ApplicationStatus, string[]][] = [
+  ["offer", ["offer", "selected", "hired", "accepted", "angebot", "zusage", "angenommen"]],
+  ["rejected", ["reject", "declined", "decline", "unsuccessful", "abgelehnt", "absage", "withdrawn"]],
+  ["interview", ["interview", "phone screen", "assessment", "screening", "onsite", "vorstellungsgespräch", "gespräch", "invited"]],
+  ["applied", ["applied", "pending", "in progress", "waiting", "submitted", "under review", "beworben"]],
+  ["saved", ["saved", "wishlist", "planned", "to apply", "draft", "bookmarked", "optional", "offen", "geplant"]],
+];
+const EMOJI_RE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu;
+
+function normalizeStatusClient(raw: RawCellValue | undefined): [ApplicationStatus, boolean] {
+  const s = (toText(raw) ?? "").toLowerCase().replace(EMOJI_RE, "").trim();
+  if (!s) return ["saved", false];
+  for (const [status, keywords] of CLIENT_STATUS_KEYWORDS) {
+    if (keywords.some((k) => s.includes(k))) return [status, true];
+  }
+  return ["saved", false];
+}
+
+function toSalary(raw: RawCellValue | undefined): { min: number | null; max: number | null; text: string | null } {
+  const s = toText(raw);
+  if (!s) return { min: null, max: null, text: null };
+  const multiplier = /\dk\b/i.test(s) ? 1000 : 1;
+  const nums = [...s.matchAll(/\d[\d,]*(?:\.\d+)?/g)].map((m) => parseFloat(m[0].replace(/,/g, "")) * multiplier);
+  if (nums.length === 0) return { min: null, max: null, text: s };
+  return { min: Math.min(...nums), max: Math.max(...nums), text: s };
+}
+
+function daysSinceIso(iso: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
+}
+
+const NONE_COLUMN = "__none__";
+
+function ConfidenceBadge({ confidence, mapped }: { confidence: number; mapped: boolean }) {
+  if (!mapped) {
+    return <Badge variant="destructive" className="shrink-0 text-[10px]">Not detected</Badge>;
+  }
+  const tone =
+    confidence > 0.8 ? "good" :
+    confidence >= 0.45 ? "warning" : "critical";
+  const className = {
+    good: "bg-[color-mix(in_oklch,var(--status-good)_16%,transparent)] text-[color:var(--status-good)]",
+    warning: "bg-[color-mix(in_oklch,var(--status-warning)_16%,transparent)] text-[color:var(--status-warning)]",
+    critical: "bg-destructive/10 text-destructive",
+  }[tone];
+  return (
+    <Badge className={cn("shrink-0 border-transparent tabular-nums", className)}>
+      {Math.round(confidence * 100)}% match
+    </Badge>
+  );
+}
 
 // ── Upload zone ──────────────────────────────────────────────────────
 
@@ -190,6 +269,48 @@ function ImportWizard({ onImported }: { onImported: () => void }) {
     });
   }
 
+  /** Manual override of Stage 2's auto-detected column mapping — re-derives
+   * every row's value for this field from the newly chosen source column. */
+  function remapField(fieldKey: ImportColumnField, column: string | null) {
+    setPreview((prev) => {
+      if (!prev) return prev;
+      const rawForColumn = column ? prev.raw_columns[column] ?? [] : [];
+      const rows = prev.rows.map((row, i) => {
+        const raw = rawForColumn[i];
+        switch (fieldKey) {
+          case "job_title": return { ...row, job_title: toText(raw) };
+          case "company": return { ...row, company: toText(raw) };
+          case "location": return { ...row, location: toText(raw) };
+          case "job_url": return { ...row, job_url: toText(raw) };
+          case "notes": return { ...row, notes: toText(raw) };
+          case "platform": return { ...row, platform: toText(raw) };
+          case "date_applied": {
+            const iso = toDateIso(raw);
+            const days = daysSinceIso(iso);
+            return { ...row, date_applied: iso, days_since_applied: days, is_stale: row.status === "applied" && days !== null && days >= 30 };
+          }
+          case "status": {
+            const [status, recognized] = normalizeStatusClient(raw);
+            return {
+              ...row, status, status_recognized: recognized,
+              is_stale: status === "applied" && row.days_since_applied !== null && row.days_since_applied >= 30,
+            };
+          }
+          case "salary": {
+            const { min, max, text } = toSalary(raw);
+            return { ...row, salary_min: min, salary_max: max, salary_text: text };
+          }
+          default: return row;
+        }
+      });
+      return {
+        ...prev,
+        column_mapping: { ...prev.column_mapping, [fieldKey]: { column, confidence: column ? 1 : 0 } },
+        rows,
+      };
+    });
+  }
+
   async function handleConfirm() {
     if (!preview) return;
     setConfirming(true);
@@ -248,14 +369,32 @@ function ImportWizard({ onImported }: { onImported: () => void }) {
           </Button>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {/* Detected column mapping */}
-          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border bg-secondary/20 px-3 py-2.5 text-xs">
-            <span className="mr-1 font-medium text-muted-foreground">Detected columns:</span>
-            {Object.entries(preview.column_mapping).map(([field, col]) => (
-              <Badge key={field} variant={col ? "secondary" : "outline"} className={cn(!col && "text-muted-foreground/60")}>
-                {COLUMN_LABELS[field] ?? field}{col ? ` ← "${col}"` : " — not found"}
-              </Badge>
-            ))}
+          {/* Detected column mapping — reviewable and manually overridable */}
+          <div className="rounded-lg border p-3">
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Wand2 className="h-3.5 w-3.5" /> Column mapping — override anything that looks wrong
+            </div>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {(Object.keys(preview.column_mapping) as ImportColumnField[]).map((f) => {
+                const m = preview.column_mapping[f];
+                return (
+                  <div key={f} className="flex items-center gap-1.5 rounded-md border bg-secondary/20 px-2 py-1.5">
+                    <span className="w-24 shrink-0 text-xs font-medium">{COLUMN_LABELS[f] ?? f}</span>
+                    <Select
+                      value={m.column ?? NONE_COLUMN}
+                      onValueChange={(v) => v && remapField(f, v === NONE_COLUMN ? null : v)}
+                    >
+                      <SelectTrigger className="h-7 flex-1 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_COLUMN}>— Not mapped —</SelectItem>
+                        {preview.detected_columns.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <ConfidenceBadge confidence={m.confidence} mapped={!!m.column} />
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Quick stats */}
@@ -628,7 +767,26 @@ function ApplicationsTable({ apps, loading, onChanged }: {
 
 // ── Import history ───────────────────────────────────────────────────
 
-function ImportHistoryCard({ history }: { history: ImportHistoryEntry[] | null }) {
+function ImportHistoryCard({ history, onDeleted }: { history: ImportHistoryEntry[] | null; onDeleted: () => void }) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDelete(h: ImportHistoryEntry) {
+    const ok = window.confirm(
+      `Remove "${h.filename}"? This also deletes the ${h.imported_rows} application${h.imported_rows === 1 ? "" : "s"} it imported — this can't be undone.`
+    );
+    if (!ok) return;
+    setDeletingId(h.id);
+    try {
+      const res = await importsApi.removeHistory(h.id);
+      toast.success(`Removed import — ${res.applications_removed} application${res.applications_removed === 1 ? "" : "s"} deleted`);
+      onDeleted();
+    } catch (err) {
+      toast.error(isApiError(err) ? err.message : "Could not remove import");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (!history || history.length === 0) return null;
   return (
     <Card>
@@ -646,6 +804,15 @@ function ImportHistoryCard({ history }: { history: ImportHistoryEntry[] | null }
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Badge variant="secondary">{h.imported_rows}/{h.total_rows} imported</Badge>
               {h.duplicate_count > 0 && <Badge variant="outline">{h.duplicate_count} dupes</Badge>}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                disabled={deletingId === h.id}
+                onClick={() => handleDelete(h)}
+                aria-label={`Remove ${h.filename}`}
+              >
+                {deletingId === h.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              </Button>
             </div>
           </div>
         ))}
@@ -661,13 +828,28 @@ function ImportPageInner() {
   const [loadingApps, setLoadingApps] = useState(true);
   const [history, setHistory] = useState<ImportHistoryEntry[] | null>(null);
 
+  // Out-of-order network responses are a real risk here: quick actions,
+  // status changes, and imports can all trigger overlapping list refetches.
+  // Each loader tags its own request and only commits the result if it's
+  // still the most recent one in flight, so a slow stale response can never
+  // clobber state a newer, faster response already set.
+  const appsRequestRef = useRef(0);
+  const historyRequestRef = useRef(0);
+
   const loadApplications = useCallback(() => {
+    const requestId = ++appsRequestRef.current;
     setLoadingApps(true);
-    applicationsApi.list().then(setApps).catch(() => setApps([])).finally(() => setLoadingApps(false));
+    applicationsApi.list()
+      .then((data) => { if (requestId === appsRequestRef.current) setApps(data); })
+      .catch(() => { if (requestId === appsRequestRef.current) setApps([]); })
+      .finally(() => { if (requestId === appsRequestRef.current) setLoadingApps(false); });
   }, []);
 
   const loadHistory = useCallback(() => {
-    importsApi.history().then(setHistory).catch(() => setHistory([]));
+    const requestId = ++historyRequestRef.current;
+    importsApi.history()
+      .then((data) => { if (requestId === historyRequestRef.current) setHistory(data); })
+      .catch(() => { if (requestId === historyRequestRef.current) setHistory([]); });
   }, []);
 
   useEffect(() => {
@@ -694,7 +876,7 @@ function ImportPageInner() {
 
       <div className="flex flex-col gap-6">
         <ImportWizard onImported={handleImported} />
-        <ImportHistoryCard history={history} />
+        <ImportHistoryCard history={history} onDeleted={handleImported} />
         <ApplicationsTable apps={apps} loading={loadingApps} onChanged={loadApplications} />
       </div>
     </PageContainer>

@@ -1,0 +1,15 @@
+# Career OS — Frontend service config-as-code.
+# Real, Railway-consumed config for the "frontend" service (Root Directory
+# = frontend/ in the dashboard, or picked up via monorepo auto-detection).
+# The api service's equivalent file is /railway.json at the repo root.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "node server.js"
+healthcheckPath = "/"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

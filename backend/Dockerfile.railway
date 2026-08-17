@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────────
+#  Career OS — Production API Dockerfile (Railway)
+#
+#  Unlike backend/Dockerfile (used by local docker-compose, built with
+#  context: ./backend), this one is built from the REPO ROOT as its
+#  Docker build context — that's Railway's default for a service whose
+#  Root Directory is unset, and it's what railway.json points at.
+#
+#  Why that matters: app/api/health.py, resumes.py, ats.py, recommend.py,
+#  advisor.py, and import_router.py all import ml.* and data_pipeline.*
+#  as sibling top-level packages (`from ml.shared.embedder import ...`,
+#  etc). Locally that's satisfied by bind-mounting ../ml and
+#  ../data_pipeline into /pkgs at runtime (see docker-compose.yml). A
+#  production image has no bind mounts, so those two directories have to
+#  be COPY'd in at build time instead — which requires build context wide
+#  enough to see them, i.e. the repo root, not backend/ alone.
+# ─────────────────────────────────────────────────────────────────
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps (path is repo-root-relative — see note above)
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# App code, plus the sibling packages it imports at runtime
+COPY backend/ ./
+COPY ml/ /pkgs/ml/
+COPY data_pipeline/ /pkgs/data_pipeline/
+
+ENV PYTHONPATH=/app:/pkgs
+ENV PYTHONUNBUFFERED=1
+ENV ENVIRONMENT=production
+
+EXPOSE 8000
+
+# railway.json's deploy.startCommand overrides this on Railway itself;
+# this CMD is what runs for `docker run` / docker-compose.prod.yml, so it
+# needs its own $PORT expansion (shell form, not exec form, so the
+# variable actually gets substituted).
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

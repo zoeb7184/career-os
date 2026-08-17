@@ -453,11 +453,21 @@ export type ImportColumnField =
   | "job_title" | "company" | "location" | "date_applied" | "status"
   | "job_url" | "notes" | "salary" | "platform";
 
+export interface ImportColumnMapping {
+  column: string | null;
+  confidence: number;
+}
+
+export type RawCellValue = string | number | boolean | null;
+
 export interface ImportPreview {
   filename: string;
   file_type: "xlsx" | "pdf";
   detected_columns: string[];
-  column_mapping: Record<ImportColumnField, string | null>;
+  column_mapping: Record<ImportColumnField, ImportColumnMapping>;
+  // Raw per-column values, row-aligned with `rows` — used to re-derive a
+  // field's values client-side if the user manually remaps it.
+  raw_columns: Record<string, RawCellValue[]>;
   rows: ImportRow[];
   summary: {
     total: number;
@@ -510,6 +520,11 @@ export const imports = {
       body: JSON.stringify({ filename, file_type: fileType, rows }),
     }),
   history: () => apiFetch<ImportHistoryEntry[]>(`${API_PREFIX}/import/history`, { auth: true }),
+  removeHistory: (id: string) =>
+    apiFetch<{ deleted: string; applications_removed: number }>(`${API_PREFIX}/import/history/${id}`, {
+      method: "DELETE",
+      auth: true,
+    }),
 };
 
 // ── Health ───────────────────────────────────────────────────────────

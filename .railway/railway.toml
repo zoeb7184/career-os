@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────
+#  Career OS — Railway service manifest (reference)
+#
+#  IMPORTANT — what this file actually is:
+#  Railway's config-as-code is per-service: each service reads its own
+#  railway.json/railway.toml from its own Root Directory. There is no
+#  single file Railway parses to create a project's services for you —
+#  you still add each service once in the dashboard (or via `railway
+#  add` / the CLI), the first time you set the project up. See DEPLOY.md
+#  for that walkthrough.
+#
+#  What THIS file is for: one place to see every service this project
+#  needs, where its real config lives, and what it's for — so you don't
+#  have to reconstruct that from five different dashboard tabs. Treat it
+#  as documentation that happens to be valid TOML, not an executable
+#  manifest.
+#
+#  The two services backed by this repo have their own real,
+#  Railway-consumed config files:
+#    - api      → /railway.json           (repo root, DOCKERFILE builder)
+#    - frontend → /frontend/railway.toml   (frontend/, DOCKERFILE builder)
+# ─────────────────────────────────────────────────────────────────
+
+[services.api]
+description = "FastAPI backend"
+source = "repo"
+configFile = "railway.json"
+rootDirectory = "/"
+dockerfile = "backend/Dockerfile.railway"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+publicNetworking = true
+requiredEnvVars = [
+  "POSTGRES_URL", "REDIS_URL", "QDRANT_URL", "JWT_SECRET_KEY",
+  "GROQ_API_KEY", "CORS_ORIGINS", "ENVIRONMENT", "LOG_LEVEL",
+]
+
+[services.frontend]
+description = "Next.js production frontend"
+source = "repo"
+configFile = "frontend/railway.toml"
+rootDirectory = "/frontend"
+dockerfile = "Dockerfile"
+startCommand = "node server.js"
+publicNetworking = true
+requiredEnvVars = [
+  "NEXT_PUBLIC_API_URL",  # build-time — see frontend/Dockerfile's ARG note
+]
+
+[services.postgres]
+description = "Primary database — add via Railway's Postgres plugin, not this repo"
+source = "railway-plugin"
+plugin = "postgresql"
+suppliesEnvVars = ["DATABASE_URL", "DATABASE_PUBLIC_URL"]
+note = "app expects POSTGRES_URL — set it on api to ${{Postgres.DATABASE_URL}}"
+
+[services.redis]
+description = "Cache + Celery broker/backend — add via Railway's Redis plugin"
+source = "railway-plugin"
+plugin = "redis"
+suppliesEnvVars = ["REDIS_URL", "REDIS_PUBLIC_URL"]
+note = "set api's REDIS_URL / CELERY_BROKER_URL / CELERY_RESULT_BACKEND to ${{Redis.REDIS_URL}}"
+
+[services.qdrant]
+description = "Vector DB for job/resume embeddings — add as a Docker Image service"
+source = "docker-image"
+image = "qdrant/qdrant:v1.9.1"
+internalPort = 6333
+volume = "/qdrant/storage"
+note = "set api's QDRANT_URL to http://<service-name>.railway.internal:6333"

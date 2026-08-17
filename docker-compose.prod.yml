@@ -1,0 +1,165 @@
+# ─────────────────────────────────────────────────────────────────
+#  Career OS — Production Docker Compose
+#
+#  Railway does NOT run this file — it deploys each service
+#  individually from railway.json (api) and frontend/railway.toml
+#  (frontend), with Postgres/Redis as plugins and Qdrant as a Docker
+#  Image service (see DEPLOY.md). This compose file exists to build
+#  and run the exact same production images locally, so you can catch
+#  a broken prod build before pushing it:
+#
+#      export $(grep -v '^#' .env.production | xargs)   # see below
+#      docker compose -f docker-compose.prod.yml up --build
+#
+#  Differences from docker-compose.yml (dev):
+#    - no bind mounts — the image is the artifact, same as Railway ships
+#    - no mlflow (unused in the live request path, drops the service)
+#    - ENVIRONMENT=production, LOG_LEVEL=INFO
+#    - secrets have no insecure defaults — unset = the container refuses
+#      to start rather than quietly running with "career_pass" etc.
+#    - api/worker listen on $PORT, matching Railway's contract
+# ─────────────────────────────────────────────────────────────────
+
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.railway
+    container_name: career-os-api-prod
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    environment:
+      - "ENVIRONMENT=production"
+      - "LOG_LEVEL=INFO"
+      - "PORT=${PORT:-8000}"
+      - "PYTHONPATH=/app:/pkgs"
+      - "POSTGRES_URL=postgresql://${POSTGRES_USER:-career_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-career_os}"
+      - "REDIS_URL=redis://redis:6379/0"
+      - "QDRANT_URL=http://qdrant:6333"
+      - "CELERY_BROKER_URL=redis://redis:6379/1"
+      - "CELERY_RESULT_BACKEND=redis://redis:6379/2"
+      - "JWT_SECRET_KEY=${JWT_SECRET_KEY:?Set JWT_SECRET_KEY — generate one with openssl rand -hex 32}"
+      - "JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}"
+      - "CORS_ORIGINS=${CORS_ORIGINS:?Set CORS_ORIGINS to your frontend's URL}"
+      - "GROQ_API_KEY=${GROQ_API_KEY:?Set GROQ_API_KEY}"
+      - "GROQ_MODEL_EXTRACTION=${GROQ_MODEL_EXTRACTION:-llama-3.1-8b-instant}"
+      - "GROQ_MODEL_ADVISOR=${GROQ_MODEL_ADVISOR:-llama-3.3-70b-versatile}"
+      - "EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}"
+      - "ADZUNA_APP_ID=${ADZUNA_APP_ID:-}"
+      - "ADZUNA_APP_KEY=${ADZUNA_APP_KEY:-}"
+      - "REED_API_KEY=${REED_API_KEY:-}"
+      - "THE_MUSE_API_KEY=${THE_MUSE_API_KEY:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - career-os-net
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:${PORT:-8000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.railway
+    container_name: career-os-worker-prod
+    command: celery -A app.workers.celery_app worker --loglevel=info --queues=ats,embeddings,default --concurrency=2
+    environment:
+      - "ENVIRONMENT=production"
+      - "LOG_LEVEL=INFO"
+      - "PYTHONPATH=/app:/pkgs"
+      - "POSTGRES_URL=postgresql://${POSTGRES_USER:-career_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-career_os}"
+      - "REDIS_URL=redis://redis:6379/0"
+      - "QDRANT_URL=http://qdrant:6333"
+      - "CELERY_BROKER_URL=redis://redis:6379/1"
+      - "CELERY_RESULT_BACKEND=redis://redis:6379/2"
+      - "GROQ_API_KEY=${GROQ_API_KEY:?Set GROQ_API_KEY}"
+      - "GROQ_MODEL_EXTRACTION=${GROQ_MODEL_EXTRACTION:-llama-3.1-8b-instant}"
+      - "EMBEDDING_MODEL=${EMBEDDING_MODEL:-all-MiniLM-L6-v2}"
+    depends_on:
+      - redis
+      - postgres
+    restart: unless-stopped
+    networks:
+      - career-os-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL to the api service's public URL}
+    container_name: career-os-frontend-prod
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - "NODE_ENV=production"
+      - "PORT=3000"
+      - "HOSTNAME=0.0.0.0"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - career-os-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: career-os-postgres-prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-career_os}
+      POSTGRES_USER: ${POSTGRES_USER:-career_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - career-os-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-career_user} -d ${POSTGRES_DB:-career_os}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No host port mapping — production Postgres shouldn't be reachable
+    # from outside the compose network. Use `docker compose exec` to get in.
+
+  redis:
+    image: redis:7-alpine
+    container_name: career-os-redis-prod
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data_prod:/data
+    restart: unless-stopped
+    networks:
+      - career-os-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.1
+    container_name: career-os-qdrant-prod
+    volumes:
+      - qdrant_data_prod:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - career-os-net
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+  qdrant_data_prod:
+
+networks:
+  career-os-net:
+    driver: bridge

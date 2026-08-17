@@ -1,0 +1,32 @@
+name: Deploy to Railway
+
+# Runs only after the CI workflow (.github/workflows/ci.yml) finishes on
+# main — not on every push. `workflow_run` fires once CI completes
+# regardless of outcome, so the job itself is gated on conclusion ==
+# 'success' below; a failing/red CI run never reaches `railway up`.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy api + frontend
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Deploy backend API
+        run: railway up --service api --ci
+
+      - name: Deploy frontend
+        run: railway up --service frontend --ci

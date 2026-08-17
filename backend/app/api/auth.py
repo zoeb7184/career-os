@@ -9,6 +9,7 @@ GET  /api/v1/auth/me        — get current user (protected)
 """
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -39,6 +40,20 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+_PASSWORD_NUMBER_OR_SPECIAL_RE = re.compile(r"[0-9!@#$%^&*]")
+
+
+def _validate_password(password: str) -> str | None:
+    """Server-side mirror of the frontend's minimum bar — the strength meter
+    is advisory UX, this is the actual gate. Returns an error message if the
+    password fails validation, else None."""
+    if len(password) < 8:
+        return "Password must be at least 8 characters long."
+    if not _PASSWORD_NUMBER_OR_SPECIAL_RE.search(password):
+        return "Password must contain at least one number or special character (!@#$%^&*)."
+    return None
 
 
 def create_token(user_id: str) -> str:
@@ -73,6 +88,11 @@ async def get_current_user(
 
 @router.post("/register")
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    password_error = _validate_password(request.password)
+    if password_error:
+        return JSONResponse(status_code=400, content={
+            "data": None, "error": {"code": "AUTH_003", "message": password_error, "detail": {}}
+        })
     # Check email not taken
     existing = await db.execute(text("SELECT id FROM users WHERE email = :e"), {"e": request.email})
     if existing.fetchone():
