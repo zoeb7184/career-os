@@ -8,11 +8,12 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)](https://postgresql.org)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker)](https://docker.com)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python)](https://python.org)
+[![CI](https://github.com/zoeb7184/career-os/actions/workflows/ci.yml/badge.svg)](https://github.com/zoeb7184/career-os/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **A production-grade platform combining job discovery, ATS resume analysis, AI career advice, and labor market intelligence — built as a full Data Science portfolio project.**
 
-[Live Demo](#) · [API Docs](http://localhost:8000/docs) · [Report Bug](https://github.com/zoeb7184/career-os/issues)
+[🌐 Live Demo](https://frontend-production-98e0.up.railway.app) · [📖 API Docs](https://career-os-production-43d8.up.railway.app/docs) · [🐛 Report Bug](https://github.com/zoeb7184/career-os/issues)
 
 </div>
 
@@ -20,7 +21,7 @@
 
 ## 📌 What is Career OS?
 
-Career OS is a unified AI platform for students and job seekers that replaces scattered tools like LinkedIn Premium, Jobscan, Teal, and Huntr with a single system. It ingests real job data daily, analyzes resumes with ML, recommends jobs using vector similarity, and answers career questions via a RAG-powered advisor — all running on a production-grade microservice architecture.
+Career OS is a unified AI platform for students and job seekers that replaces scattered tools like LinkedIn Premium, Jobscan, Teal, and Huntr with a single system. It ingests real job data daily from multiple APIs, analyzes resumes with ML, recommends jobs using vector similarity, and answers career questions via a RAG-powered advisor — all running on a production-grade microservice architecture deployed on Railway.
 
 > Built by **Zoeb Ali Khan** — M.Sc. Data Science, Universität Bielefeld
 
@@ -30,14 +31,15 @@ Career OS is a unified AI platform for students and job seekers that replaces sc
 
 | Feature | Description |
 |--------|-------------|
-| 🔍 **Job Aggregation** | Daily ingestion from Adzuna, Reed, and Remotive APIs — 679+ real jobs, deduplicated and normalized |
+| 🔍 **Job Aggregation** | Daily ingestion from Adzuna, Reed, and Remotive APIs — 656+ real jobs, deduplicated and normalized |
 | 🧠 **ATS Resume Analyzer** | Upload your CV and get a score (0–100) broken down by skill match, semantic similarity, structure, and keyword density |
 | 🎯 **Job Recommender** | Qdrant vector search matches your resume embedding to the most relevant jobs with re-ranking |
 | 💬 **AI Career Advisor** | RAG chatbot backed by live job data — answers questions like "Which skills should I learn next?" |
 | 📊 **Market Intelligence** | Real-time dashboards showing top skills, salary ranges, hiring companies, remote vs onsite trends |
 | 📈 **Demand Forecasting** | Prophet time-series models forecast 30/60/90-day skill demand trends |
 | 📋 **Application Tracker** | Kanban board — drag applications from Saved → Applied → Interview → Offer/Rejected |
-| 🔐 **Auth System** | JWT authentication with email/password and Google OAuth |
+| ✨ **Smart Import** | Upload Excel/PDF job tracker — ML-powered column detection with confidence scoring imports your existing applications automatically |
+| 🔐 **Auth System** | JWT authentication with real-time password strength validation |
 
 ---
 
@@ -47,12 +49,12 @@ Career OS is a unified AI platform for students and job seekers that replaces sc
 ┌─────────────────────────────────────────────────────────────┐
 │                        Frontend                             │
 │              Next.js 14 · TypeScript · Tailwind             │
-│         Jobs · ATS · Analytics · Advisor · Tracker          │
+│   Jobs · ATS · Analytics · Advisor · Tracker · Import       │
 └──────────────────────┬──────────────────────────────────────┘
                        │ REST + SSE
 ┌──────────────────────▼──────────────────────────────────────┐
 │                     FastAPI Backend                         │
-│        9 routers · JWT auth · Celery workers                │
+│       11 routers · JWT auth · Celery workers                │
 │     JSON logging · Error codes · Master /health endpoint    │
 └───┬──────────┬────────────┬────────────┬────────────────────┘
     │          │            │            │
@@ -64,8 +66,8 @@ Career OS is a unified AI platform for students and job seekers that replaces sc
 ┌───▼─────────────────────────────────────────────────────────┐
 │                    ML / AI Layer                            │
 │  Skill Extractor · ATS Analyzer · Recommender               │
-│  RAG Advisor · Forecaster · Embedder (fastembed)            │
-│                   LLM: Groq (Llama 3)                       │
+│  RAG Advisor · Forecaster · Smart Import Parser             │
+│           Embedder (fastembed) · LLM: Groq                  │
 └───────────────────┬─────────────────────────────────────────┘
                     │
 ┌───────────────────▼─────────────────────────────────────────┐
@@ -77,42 +79,56 @@ Career OS is a unified AI platform for students and job seekers that replaces sc
 
 ---
 
+## 🚀 Live Deployment
+
+| Service | URL |
+|---------|-----|
+| 🌐 Frontend | https://frontend-production-98e0.up.railway.app |
+| 🔌 Backend API | https://career-os-production-43d8.up.railway.app |
+| 📖 API Docs | https://career-os-production-43d8.up.railway.app/docs |
+| ❤️ Health Check | https://career-os-production-43d8.up.railway.app/health |
+
+---
+
 ## 🧱 Tech Stack
 
 ### Backend
-- **FastAPI** — async REST API with 9 routers, JWT auth, SSE streaming
-- **PostgreSQL 16** — 7 normalized tables (jobs, users, skills, resumes, applications, market_snapshots)
+- **FastAPI** — async REST API with 11 routers, JWT auth, SSE streaming
+- **PostgreSQL 16** — 8 normalized tables (jobs, users, skills, resumes, applications, market_snapshots, imports)
 - **Redis** — Celery broker + response caching
 - **Celery** — async workers for ATS analysis and embedding generation
 - **Alembic** — database migrations
 
 ### ML / AI
-- **Groq LLM** (Llama 3.1 8B + 70B) — skill extraction and RAG advisor (free tier)
+- **Groq LLM** — skill extraction and RAG advisor (free tier, Llama 3 models)
 - **fastembed** — local sentence embeddings (all-MiniLM-L6-v2, 384-dim, zero API cost)
 - **Qdrant** — vector database for job and resume embeddings
 - **Prophet** — time-series forecasting for skill demand
 - **scikit-learn + rapidfuzz** — skill normalization and matching
+- **Smart Import ML** — embedding-based column detection with confidence scoring (60% name semantics + 40% content heuristics)
 
 ### Data Pipeline
 - **Prefect** — orchestrated ETL flows (daily ingestion + market snapshots)
-- **Adzuna API** — millions of real job listings
+- **Adzuna API** — millions of real job listings across Europe
 - **Reed API** — UK tech job listings
-- **Remotive API** — remote jobs (no key required)
+- **Remotive API** — remote jobs worldwide (no key required)
 
 ### Frontend
 - **Next.js 14** App Router + TypeScript
-- **Tailwind CSS** + shadcn/ui components
+- **Tailwind CSS** + shadcn/ui — deep teal + warm amber design system
 - **Recharts** — market intelligence visualizations
 - **SSE streaming** — real-time advisor chat responses
+- **Drag-and-drop Kanban** — application tracker
 
 ### Infrastructure
-- **Docker Compose** — 6 services orchestrated locally
+- **Railway** — production deployment (backend + frontend + PostgreSQL + Redis + Qdrant)
+- **Docker Compose** — local development (6 services)
 - **MLflow** — experiment tracking for ATS and recommender models
-- **GitHub Actions** — CI on every push
+- **GitHub Actions** — CI on every push (tests + lint)
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Local)
 
 ### Prerequisites
 - Docker Desktop running
@@ -131,13 +147,14 @@ cp .env.example .env
 ```bash
 make dev          # starts all 6 Docker containers
 make setup        # runs DB migrations + seeds skill taxonomy
-make ingest       # pulls real jobs from APIs (679+ jobs)
+make ingest       # pulls real jobs from APIs (656+ jobs)
 ```
 
 ### 3. Open the app
 ```
 Frontend:   http://localhost:3001
 API Docs:   http://localhost:8000/docs
+Health:     http://localhost:8000/health
 MLflow:     http://localhost:5001
 Qdrant:     http://localhost:6333/dashboard
 ```
@@ -172,7 +189,8 @@ docker logs career-os-api 2>&1 | grep '"node": "ats_analyzer"'
 career-os/
 ├── backend/                  # FastAPI application
 │   ├── app/
-│   │   ├── api/              # 9 routers (health, auth, jobs, ats, recommend, advisor, analytics, resumes, applications)
+│   │   ├── api/              # 11 routers (health, auth, jobs, ats, recommend,
+│   │   │                     #   advisor, analytics, resumes, applications, import)
 │   │   ├── models/           # SQLAlchemy models
 │   │   ├── workers/          # Celery async tasks
 │   │   └── middleware/       # JSON logging + error handling
@@ -183,13 +201,16 @@ career-os/
 │   ├── recommender/          # Qdrant ANN job matching
 │   ├── rag_advisor/          # RAG career Q&A with intent detection
 │   ├── forecaster/           # Prophet skill demand forecasting
-│   └── skill_extractor/      # Groq LLM structured skill extraction
+│   ├── skill_extractor/      # Groq LLM structured skill extraction
+│   └── import_parser/        # ML-powered column detection for Smart Import
 ├── data-pipeline/            # ETL pipeline
 │   ├── connectors/           # Adzuna, Reed, Remotive
-│   ├── transformers/         # Dedup + skill normalization
+│   ├── transformers/         # Dedup + skill normalization (85 canonical skills)
 │   └── flows/                # Prefect orchestration flows
-├── frontend/                 # Next.js 14 app (9 pages)
-├── docker-compose.yml        # 6 services
+├── frontend/                 # Next.js 14 app (10 pages)
+├── samples/                  # Sample import files for testing Smart Import
+├── docker-compose.yml        # 6 services for local dev
+├── railway.json              # Railway production deployment config
 └── Makefile                  # make dev/test/health/ingest/setup
 ```
 
@@ -208,8 +229,9 @@ This project demonstrates the complete Data Science lifecycle:
 | **Recommendation** | Approximate nearest neighbour search with multi-factor re-ranking |
 | **Forecasting** | Prophet time-series with confidence intervals and trend detection |
 | **RAG** | Retrieval-augmented generation with intent classification |
+| **ML Column Detection** | Embedding similarity + content heuristics for intelligent spreadsheet parsing |
 | **MLOps** | MLflow experiment tracking, structured logging, health monitoring |
-| **Deployment** | Docker Compose, CI/CD via GitHub Actions |
+| **Deployment** | Railway (production) + Docker Compose (local) + GitHub Actions CI/CD |
 
 ---
 
@@ -249,7 +271,7 @@ Test coverage includes unit tests for all ML nodes, API endpoint tests, health c
 | GET | `/health` | All 13 node statuses |
 | POST | `/api/v1/auth/register` | Create account |
 | POST | `/api/v1/auth/login` | Get JWT token |
-| GET | `/api/v1/jobs` | Search/filter jobs |
+| GET | `/api/v1/jobs` | Search/filter jobs (656+ live listings) |
 | POST | `/api/v1/ats/analyze` | ATS resume scoring |
 | GET | `/api/v1/recommend/{user_id}` | Personalised job recommendations |
 | POST | `/api/v1/advisor/ask` | Career Q&A |
@@ -258,8 +280,10 @@ Test coverage includes unit tests for all ML nodes, API endpoint tests, health c
 | GET | `/api/v1/analytics/salary` | Salary ranges by skill |
 | POST | `/api/v1/applications/` | Save a job |
 | PATCH | `/api/v1/applications/{id}` | Update application status |
+| POST | `/api/v1/import/upload` | Smart Import — parse spreadsheet/PDF |
+| POST | `/api/v1/import/confirm` | Confirm and save imported applications |
 
-Full interactive docs at `http://localhost:8000/docs`
+Full interactive docs at [https://career-os-production-43d8.up.railway.app/docs](https://career-os-production-43d8.up.railway.app/docs)
 
 ---
 
@@ -269,7 +293,7 @@ Built by **Zoeb Ali Khan**
 
 M.Sc. Data Science · Universität Bielefeld · Expected March 2027
 
-DataCamp Certified: Data Scientist Professional · Data Engineer Associate
+DataCamp Certified: Data Scientist Professional · Data Engineer Associate · Data Scientist Associate
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/zoeb-ali-khan)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=for-the-badge&logo=github)](https://github.com/zoeb7184)
