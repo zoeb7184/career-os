@@ -59,8 +59,11 @@ class Settings(BaseSettings):
     # ── AI / LLM (Groq — FREE, no credit card needed) ────────────
     # Get your free key at: https://console.groq.com
     groq_api_key: str = ""
-    groq_model_extraction: str = "llama-3.1-8b-instant"      # fast for bulk skill extraction
-    groq_model_advisor: str    = "llama-3.3-70b-versatile"   # smarter for RAG Q&A
+    # llama-3.1-8b-instant / llama-3.3-70b-versatile were retired from Groq's
+    # catalog — swapped for their current (2026) equivalents. Verify against
+    # https://api.groq.com/openai/v1/models if this starts 404ing again.
+    groq_model_extraction: str = "openai/gpt-oss-20b"         # fast for bulk skill extraction
+    groq_model_advisor: str    = "openai/gpt-oss-120b"        # smarter for RAG Q&A
 
     # Local embedding model — runs on your machine, zero API cost
     embedding_model: str = "all-MiniLM-L6-v2"
