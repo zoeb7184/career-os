@@ -58,3 +58,7 @@ Thumbs.db
 *.swp
 .env
 .claude
+
+# Test artifacts / one-off exports (should never be committed)
+demo-cv.pdf
+*.zip
